@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Car Dodge Gacha Game</title>
+<style>
+body {
+    margin: 0;
+    background: #111;
+    color: white;
+    font-family: Arial;
+    text-align: center;
+}
+canvas {
+    background: #222;
+    display: block;
+    margin: auto;
+    border: 3px solid white;
+}
+button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    background: gold;
+    font-weight: bold;
+    border-radius: 8px;
+}
+#menu {
+    margin-top: 10px;
+}
+</style>
+</head>
+<body>
+
+<h2>🚗 Car Dodge Gacha</h2>
+<canvas id="game" width="300" height="500"></canvas>
+
+<div id="menu">
+    <button onclick="startGame()">Start</button>
+    <button onclick="rollGacha()">Gacha (100 Coin)</button>
+    <p id="info"></p>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player = {x:130, y:420, w:40, h:70, color:"red"};
+let enemies = [];
+let score = 0;
+let coins = 0;
+let gameOver = false;
+let skins = ["red","blue","lime","yellow","purple"];
+let ownedSkins = JSON.parse(localStorage.getItem("skins")) || ["red"];
+let selectedSkin = localStorage.getItem("selectedSkin") || "red";
+coins = parseInt(localStorage.getItem("coins")) || 0;
+
+player.color = selectedSkin;
+
+function saveGame(){
+    localStorage.setItem("coins", coins);
+    localStorage.setItem("skins", JSON.stringify(ownedSkins));
+    localStorage.setItem("selectedSkin", selectedSkin);
+}
+
+function drawPlayer(){
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+}
+
+function drawEnemies(){
+    ctx.fillStyle = "white";
+    enemies.forEach(e=>{
+        ctx.fillRect(e.x,e.y,e.w,e.h);
+    });
+}
+
+function spawnEnemy(){
+    let x = Math.floor(Math.random()*3)*100 + 30;
+    enemies.push({x:x,y:-80,w:40,h:70});
+}
+
+function updateEnemies(){
+    enemies.forEach(e=> e.y += 5);
+    enemies = enemies.filter(e=> e.y < 600);
+}
+
+function detectCollision(){
+    for(let e of enemies){
+        if(player.x < e.x+e.w &&
+           player.x+player.w > e.x &&
+           player.y < e.y+e.h &&
+           player.y+player.h > e.y){
+               gameOver = true;
+        }
+    }
+}
+
+function drawRoad(){
+    ctx.strokeStyle="gray";
+    ctx.lineWidth=4;
+    ctx.beginPath();
+    ctx.moveTo(100,0);
+    ctx.lineTo(100,500);
+    ctx.moveTo(200,0);
+    ctx.lineTo(200,500);
+    ctx.stroke();
+}
+
+function gameLoop(){
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.fillText("GAME OVER",100,250);
+        coins += Math.floor(score/10);
+        saveGame();
+        return;
+    }
+
+    ctx.clearRect(0,0,300,500);
+    drawRoad();
+    drawPlayer();
+    drawEnemies();
+    updateEnemies();
+    detectCollision();
+
+    score++;
+    if(score%60===0) spawnEnemy();
+
+    ctx.fillStyle="white";
+    ctx.fillText("Score: "+score,10,20);
+    ctx.fillText("Coin: "+coins,200,20);
+
+    requestAnimationFrame(gameLoop);
+}
+
+function startGame(){
+    enemies=[];
+    score=0;
+    gameOver=false;
+    gameLoop();
+}
+
+function rollGacha(){
+    if(coins < 100){
+        alert("Coin kurang!");
+        return;
+    }
+    coins -= 100;
+    let reward = skins[Math.floor(Math.random()*skins.length)];
+    if(!ownedSkins.includes(reward)){
+        ownedSkins.push(reward);
+        selectedSkin = reward;
+        player.color = reward;
+        alert("Dapet skin: "+reward);
+    } else {
+        alert("Dapet duplikat 😅");
+    }
+    saveGame();
+}
+
+// CONTROL HP (touch kiri kanan)
+canvas.addEventListener("touchstart", function(e){
+    let touchX = e.touches[0].clientX;
+    if(touchX < window.innerWidth/2){
+        player.x -= 100;
+    } else {
+        player.x += 100;
+    }
+    if(player.x < 30) player.x=30;
+    if(player.x > 230) player.x=230;
+});
+
+// CONTROL PC (keyboard)
+document.addEventListener("keydown", function(e){
+    if(e.key==="ArrowLeft") player.x -=100;
+    if(e.key==="ArrowRight") player.x +=100;
+    if(player.x < 30) player.x=30;
+    if(player.x > 230) player.x=230;
+});
+
+document.getElementById("info").innerText =
+"Skin punya: "+ownedSkins.join(", ");
+</script>
+
+</body>
+</html>
